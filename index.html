@@ -1,0 +1,651 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover"
+    />
+    <title>Digital Flute</title>
+    <style>
+      :root {
+        --bg: #111318;
+        --surface: #1b1e26;
+        --border: #2c313d;
+        --accent: #38bdf8;
+        --target: #f59e0b;
+        --text: #f1f5f9;
+        --muted: #94a3b8;
+        --tube: linear-gradient(
+          90deg,
+          #64748b 0%,
+          #cbd5e1 35%,
+          #e2e8f0 50%,
+          #94a3b8 80%,
+          #475569 100%
+        );
+      }
+
+      * {
+        box-sizing: border-box;
+        user-select: none;
+        -webkit-user-select: none;
+        touch-action: none;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family:
+          -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica,
+          Arial, sans-serif;
+        height: 100vh;
+        height: 100dvh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+      }
+
+      header {
+        background: var(--surface);
+        border-bottom: 1px solid var(--border);
+        padding: 10px 14px;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .top-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 10px;
+      }
+
+      .title {
+        font-size: 1rem;
+        font-weight: 700;
+        letter-spacing: 0.01em;
+      }
+
+      select {
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 6px 10px;
+        font-size: 0.85rem;
+        outline: none;
+        max-width: 195px;
+      }
+
+      .status-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        min-height: 30px;
+        gap: 8px;
+      }
+
+      .status-text {
+        font-size: 0.88rem;
+        color: var(--muted);
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
+      .status-text strong {
+        color: var(--target);
+        font-size: 1rem;
+        margin-right: 6px;
+      }
+
+      .status-text.free strong {
+        color: var(--accent);
+      }
+
+      .controls {
+        display: none;
+        gap: 6px;
+        flex-shrink: 0;
+      }
+
+      .controls.visible {
+        display: flex;
+      }
+
+      button {
+        background: var(--bg);
+        color: var(--text);
+        border: 1px solid var(--border);
+        border-radius: 6px;
+        padding: 5px 11px;
+        font-size: 0.8rem;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      button.active {
+        background: var(--accent);
+        color: #082f49;
+        border-color: var(--accent);
+      }
+
+      main {
+        flex: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 12px 0;
+      }
+
+      .flute {
+        background: var(--tube);
+        width: 74px;
+        height: 96%;
+        max-height: 680px;
+        border-radius: 37px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-evenly;
+        align-items: center;
+        padding: 14px 0;
+        box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5);
+      }
+
+      .hole {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        background: #111318;
+        border: 3px solid #475569;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        transition:
+          transform 0.06s ease,
+          border-color 0.1s ease,
+          background-color 0.1s ease;
+      }
+
+      .hole span {
+        font-size: 0.85rem;
+        font-weight: 700;
+        color: #94a3b8;
+        pointer-events: none;
+      }
+
+      .hole.pressed {
+        transform: scale(0.92);
+        background: #0c4a6e;
+        border-color: var(--accent);
+      }
+
+      .hole.pressed span {
+        color: #ffffff;
+      }
+
+      .hole.target {
+        border-color: var(--target);
+        box-shadow: 0 0 12px rgba(245, 158, 11, 0.55);
+      }
+
+      .hole.target span {
+        color: var(--target);
+      }
+    </style>
+  </head>
+  <body>
+    <header>
+      <div class="top-bar">
+        <div class="title">Digital Flute</div>
+        <select id="songSelect" aria-label="Select preset">
+          <option value="free">Free Play (Default)</option>
+          <option value="rickroll">Never Gonna Give You Up</option>
+          <option value="twinkle">Twinkle Twinkle</option>
+          <option value="brahms">Brahms Lullaby</option>
+          <option value="ode">Ode to Joy</option>
+        </select>
+      </div>
+
+      <div class="status-bar">
+        <div class="status-text free" id="statusText">Free Play</div>
+        <div class="controls" id="songControls">
+          <button id="demoBtn" type="button">Demo</button>
+          <button id="resetBtn" type="button">Reset</button>
+        </div>
+      </div>
+    </header>
+
+    <main>
+      <div class="flute" id="flute">
+        <div class="hole" data-note="E5" data-freq="659.25">
+          <span>E5</span>
+        </div>
+        <div class="hole" data-note="D5" data-freq="587.33">
+          <span>D5</span>
+        </div>
+        <div class="hole" data-note="C5" data-freq="523.25">
+          <span>C5</span>
+        </div>
+        <div class="hole" data-note="B4" data-freq="493.88">
+          <span>B4</span>
+        </div>
+        <div class="hole" data-note="A4" data-freq="440.00">
+          <span>A4</span>
+        </div>
+        <div class="hole" data-note="G4" data-freq="392.00">
+          <span>G4</span>
+        </div>
+        <div class="hole" data-note="F4" data-freq="349.23">
+          <span>F4</span>
+        </div>
+        <div class="hole" data-note="E4" data-freq="329.63">
+          <span>E4</span>
+        </div>
+        <div class="hole" data-note="D4" data-freq="293.66">
+          <span>D4</span>
+        </div>
+        <div class="hole" data-note="C4" data-freq="261.63">
+          <span>C4</span>
+        </div>
+      </div>
+    </main>
+
+    <script>
+      const AudioContext = window.AudioContext || window.webkitAudioContext;
+      let ctx = null;
+      let masterGain = null;
+      let noiseBuffer = null;
+
+      function initAudio() {
+        if (!ctx) {
+          ctx = new AudioContext();
+
+          const compressor = ctx.createDynamicsCompressor();
+          compressor.connect(ctx.destination);
+
+          masterGain = ctx.createGain();
+          masterGain.gain.setValueAtTime(0.65, ctx.currentTime);
+          masterGain.connect(compressor);
+
+          const bufferSize = ctx.sampleRate * 2;
+          noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+          const data = noiseBuffer.getChannelData(0);
+          let b0 = 0,
+            b1 = 0,
+            b2 = 0;
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            b0 = 0.99886 * b0 + white * 0.0555179;
+            b1 = 0.99332 * b1 + white * 0.0750759;
+            b2 = 0.969 * b2 + white * 0.153852;
+            data[i] = (b0 + b1 + b2) * 0.07;
+          }
+        }
+        if (ctx.state === "suspended") {
+          ctx.resume();
+        }
+      }
+
+      class FluteVoice {
+        constructor(freq) {
+          initAudio();
+          const now = ctx.currentTime;
+
+          this.osc1 = ctx.createOscillator();
+          this.osc1.type = "sine";
+          this.osc1.frequency.setValueAtTime(freq, now);
+
+          this.osc2 = ctx.createOscillator();
+          this.osc2.type = "sine";
+          this.osc2.frequency.setValueAtTime(freq * 2, now);
+
+          this.osc2Gain = ctx.createGain();
+          this.osc2Gain.gain.setValueAtTime(0.16, now);
+          this.osc2.connect(this.osc2Gain);
+
+          this.lfo = ctx.createOscillator();
+          this.lfo.frequency.setValueAtTime(5, now);
+          this.lfoGain = ctx.createGain();
+          this.lfoGain.gain.setValueAtTime(1.5, now);
+          this.lfo.connect(this.lfoGain);
+          this.lfoGain.connect(this.osc1.frequency);
+          this.lfoGain.connect(this.osc2.frequency);
+          this.lfo.start(now);
+
+          this.noise = ctx.createBufferSource();
+          this.noise.buffer = noiseBuffer;
+          this.noise.loop = true;
+
+          this.noiseFilter = ctx.createBiquadFilter();
+          this.noiseFilter.type = "bandpass";
+          this.noiseFilter.frequency.setValueAtTime(freq * 1.5, now);
+          this.noiseFilter.Q.setValueAtTime(3, now);
+
+          this.noiseGain = ctx.createGain();
+          this.noiseGain.gain.setValueAtTime(0.035, now);
+          this.noise.connect(this.noiseFilter);
+          this.noiseFilter.connect(this.noiseGain);
+
+          this.env = ctx.createGain();
+          this.env.gain.setValueAtTime(0, now);
+          this.env.gain.linearRampToValueAtTime(0.85, now + 0.045);
+
+          this.osc1.connect(this.env);
+          this.osc2Gain.connect(this.env);
+          this.noiseGain.connect(this.env);
+          this.env.connect(masterGain);
+
+          this.osc1.start(now);
+          this.osc2.start(now);
+          this.noise.start(now);
+        }
+
+        stop() {
+          if (!ctx) return;
+          const now = ctx.currentTime;
+          this.env.gain.cancelScheduledValues(now);
+          this.env.gain.setValueAtTime(this.env.gain.value, now);
+          this.env.gain.linearRampToValueAtTime(0.001, now + 0.08);
+
+          setTimeout(() => {
+            try {
+              this.osc1.stop();
+              this.osc2.stop();
+              this.noise.stop();
+              this.lfo.stop();
+              this.osc1.disconnect();
+              this.osc2.disconnect();
+              this.noise.disconnect();
+              this.env.disconnect();
+            } catch (e) {}
+          }, 90);
+        }
+      }
+
+      const SONGS = {
+        rickroll: [
+          { note: "G4", lyric: "Ne-", dur: 220 },
+          { note: "A4", lyric: "ver", dur: 220 },
+          { note: "C5", lyric: "gon-", dur: 220 },
+          { note: "A4", lyric: "na", dur: 220 },
+          { note: "E5", lyric: "give", dur: 420 },
+          { note: "E5", lyric: "you", dur: 420 },
+          { note: "D5", lyric: "up", dur: 600 },
+          { note: "G4", lyric: "Ne-", dur: 220 },
+          { note: "A4", lyric: "ver", dur: 220 },
+          { note: "C5", lyric: "gon-", dur: 220 },
+          { note: "A4", lyric: "na", dur: 220 },
+          { note: "D5", lyric: "let", dur: 420 },
+          { note: "D5", lyric: "you", dur: 420 },
+          { note: "C5", lyric: "down", dur: 600 },
+          { note: "G4", lyric: "Ne-", dur: 220 },
+          { note: "A4", lyric: "ver", dur: 220 },
+          { note: "C5", lyric: "gon-", dur: 220 },
+          { note: "A4", lyric: "na", dur: 220 },
+          { note: "C5", lyric: "run", dur: 320 },
+          { note: "D5", lyric: "a-", dur: 320 },
+          { note: "B4", lyric: "round", dur: 320 },
+          { note: "A4", lyric: "and", dur: 240 },
+          { note: "G4", lyric: "de-", dur: 240 },
+          { note: "D5", lyric: "sert", dur: 320 },
+          { note: "C5", lyric: "you", dur: 650 },
+        ],
+        twinkle: [
+          { note: "C4", lyric: "Twin-", dur: 350 },
+          { note: "C4", lyric: "kle", dur: 350 },
+          { note: "G4", lyric: "twin-", dur: 350 },
+          { note: "G4", lyric: "kle", dur: 350 },
+          { note: "A4", lyric: "lit-", dur: 350 },
+          { note: "A4", lyric: "tle", dur: 350 },
+          { note: "G4", lyric: "star", dur: 600 },
+          { note: "F4", lyric: "how", dur: 350 },
+          { note: "F4", lyric: "I", dur: 350 },
+          { note: "E4", lyric: "won-", dur: 350 },
+          { note: "E4", lyric: "der", dur: 350 },
+          { note: "D4", lyric: "what", dur: 350 },
+          { note: "D4", lyric: "you", dur: 350 },
+          { note: "C4", lyric: "are", dur: 600 },
+        ],
+        brahms: [
+          { note: "E4", lyric: "Lul-", dur: 350 },
+          { note: "E4", lyric: "la-", dur: 350 },
+          { note: "G4", lyric: "by", dur: 600 },
+          { note: "E4", lyric: "and", dur: 350 },
+          { note: "E4", lyric: "good", dur: 350 },
+          { note: "G4", lyric: "night", dur: 600 },
+          { note: "E4", lyric: "in", dur: 250 },
+          { note: "G4", lyric: "the", dur: 250 },
+          { note: "C5", lyric: "sky", dur: 450 },
+          { note: "B4", lyric: "stars", dur: 350 },
+          { note: "A4", lyric: "are", dur: 350 },
+          { note: "A4", lyric: "shi-", dur: 350 },
+          { note: "G4", lyric: "ning", dur: 700 },
+        ],
+        ode: [
+          { note: "E4", lyric: "Ode", dur: 350 },
+          { note: "E4", lyric: "to", dur: 350 },
+          { note: "F4", lyric: "joy", dur: 350 },
+          { note: "G4", lyric: "re-", dur: 350 },
+          { note: "G4", lyric: "sound-", dur: 350 },
+          { note: "F4", lyric: "ing", dur: 350 },
+          { note: "E4", lyric: "voic-", dur: 350 },
+          { note: "D4", lyric: "es", dur: 350 },
+          { note: "C4", lyric: "hear", dur: 350 },
+          { note: "C4", lyric: "the", dur: 350 },
+          { note: "D4", lyric: "song", dur: 350 },
+          { note: "E4", lyric: "of", dur: 350 },
+          { note: "E4", lyric: "all", dur: 450 },
+          { note: "D4", lyric: "man-", dur: 220 },
+          { note: "D4", lyric: "kind", dur: 600 },
+        ],
+      };
+
+      const fluteEl = document.getElementById("flute");
+      const holes = Array.from(document.querySelectorAll(".hole"));
+      const songSelect = document.getElementById("songSelect");
+      const statusText = document.getElementById("statusText");
+      const songControls = document.getElementById("songControls");
+      const demoBtn = document.getElementById("demoBtn");
+      const resetBtn = document.getElementById("resetBtn");
+
+      const activeVoices = new Map();
+      const activeHoles = new Map();
+
+      let currentPreset = "free";
+      let currentStep = 0;
+      let isDemoPlaying = false;
+      let demoTimeouts = [];
+      let demoVoices = [];
+
+      function updateStatus() {
+        holes.forEach((h) => h.classList.remove("target"));
+
+        if (currentPreset === "free") {
+          statusText.classList.add("free");
+          songControls.classList.remove("visible");
+
+          const activeNotes = Array.from(activeHoles.values()).map(
+            (h) => h.dataset.note,
+          );
+          if (activeNotes.length > 0) {
+            statusText.innerHTML = `Playing <strong>${activeNotes.join(" ")}</strong>`;
+          } else {
+            statusText.textContent = "Free Play";
+          }
+          return;
+        }
+
+        statusText.classList.remove("free");
+        songControls.classList.add("visible");
+
+        const song = SONGS[currentPreset];
+        if (!song || currentStep >= song.length) {
+          statusText.innerHTML = "<strong>Done</strong> Song completed";
+          return;
+        }
+
+        const item = song[currentStep];
+        statusText.innerHTML = `Next: <strong>${item.note}</strong> ${item.lyric}`;
+
+        if (!isDemoPlaying) {
+          const targetHole = holes.find((h) => h.dataset.note === item.note);
+          if (targetHole) targetHole.classList.add("target");
+        }
+      }
+
+      function playHole(hole, pointerId) {
+        if (!hole || activeHoles.get(pointerId) === hole) return;
+
+        stopHole(pointerId);
+
+        const freq = parseFloat(hole.dataset.freq);
+        const note = hole.dataset.note;
+
+        hole.classList.add("pressed");
+        activeVoices.set(pointerId, new FluteVoice(freq));
+        activeHoles.set(pointerId, hole);
+
+        if (currentPreset === "free") {
+          updateStatus();
+        } else if (!isDemoPlaying) {
+          const song = SONGS[currentPreset];
+          if (
+            song &&
+            currentStep < song.length &&
+            song[currentStep].note === note
+          ) {
+            currentStep++;
+            updateStatus();
+          }
+        }
+      }
+
+      function stopHole(pointerId) {
+        const voice = activeVoices.get(pointerId);
+        const hole = activeHoles.get(pointerId);
+
+        if (voice) {
+          voice.stop();
+          activeVoices.delete(pointerId);
+        }
+        if (hole) {
+          hole.classList.remove("pressed");
+          activeHoles.delete(pointerId);
+        }
+
+        if (currentPreset === "free") {
+          updateStatus();
+        }
+      }
+
+      function findHole(x, y) {
+        const el = document.elementFromPoint(x, y);
+        return el ? el.closest(".hole") : null;
+      }
+
+      fluteEl.addEventListener("pointerdown", (e) => {
+        e.preventDefault();
+        const hole = findHole(e.clientX, e.clientY);
+        if (hole) playHole(hole, e.pointerId);
+      });
+
+      fluteEl.addEventListener("pointermove", (e) => {
+        e.preventDefault();
+        if (!activeVoices.has(e.pointerId)) return;
+        const hole = findHole(e.clientX, e.clientY);
+        if (hole && hole !== activeHoles.get(e.pointerId)) {
+          playHole(hole, e.pointerId);
+        } else if (!hole && activeHoles.has(e.pointerId)) {
+          stopHole(e.pointerId);
+        }
+      });
+
+      window.addEventListener("pointerup", (e) => stopHole(e.pointerId));
+      window.addEventListener("pointercancel", (e) => stopHole(e.pointerId));
+
+      function stopDemo() {
+        demoTimeouts.forEach((t) => clearTimeout(t));
+        demoTimeouts = [];
+        demoVoices.forEach((v) => v.stop());
+        demoVoices = [];
+        holes.forEach((h) => h.classList.remove("pressed"));
+        isDemoPlaying = false;
+        demoBtn.classList.remove("active");
+        demoBtn.textContent = "Demo";
+      }
+
+      function toggleDemo() {
+        if (isDemoPlaying) {
+          stopDemo();
+          updateStatus();
+          return;
+        }
+
+        const song = SONGS[currentPreset];
+        if (!song) return;
+
+        initAudio();
+        stopDemo();
+        isDemoPlaying = true;
+        demoBtn.classList.add("active");
+        demoBtn.textContent = "Stop";
+        holes.forEach((h) => h.classList.remove("target"));
+
+        let delay = 200;
+
+        song.forEach((item, index) => {
+          const t = setTimeout(() => {
+            statusText.innerHTML = `Demo: <strong>${item.note}</strong> ${item.lyric}`;
+            const hole = holes.find((h) => h.dataset.note === item.note);
+
+            if (hole) {
+              hole.classList.add("pressed");
+              const voice = new FluteVoice(parseFloat(hole.dataset.freq));
+              demoVoices.push(voice);
+
+              const stopT = setTimeout(() => {
+                voice.stop();
+                hole.classList.remove("pressed");
+              }, item.dur * 0.85);
+              demoTimeouts.push(stopT);
+            }
+
+            if (index === song.length - 1) {
+              const endT = setTimeout(() => {
+                stopDemo();
+                currentStep = 0;
+                updateStatus();
+              }, item.dur + 350);
+              demoTimeouts.push(endT);
+            }
+          }, delay);
+
+          demoTimeouts.push(t);
+          delay += item.dur;
+        });
+      }
+
+      songSelect.addEventListener("change", (e) => {
+        stopDemo();
+        currentPreset = e.target.value;
+        currentStep = 0;
+        updateStatus();
+      });
+
+      demoBtn.addEventListener("click", toggleDemo);
+
+      resetBtn.addEventListener("click", () => {
+        stopDemo();
+        currentStep = 0;
+        updateStatus();
+      });
+
+      updateStatus();
+    </script>
+  </body>
+</html>
